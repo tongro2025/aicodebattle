@@ -20,7 +20,7 @@ AI Code Battle은 Visual Studio Code 확장으로, 여러 AI 모델(Gemini, Clau
 또는, 이 저장소를 클론하여 로컬에서 빌드할 수 있습니다:
 
 ```bash
-git clone https://github.com/your-username/aicodebattle.git
+git clone https://github.com/tongro2025/aicodebattle.git
 cd aicodebattle
 npm install
 npm run compile
