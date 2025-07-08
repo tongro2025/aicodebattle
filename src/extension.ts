@@ -28,6 +28,9 @@ export function activate(context: vscode.ExtensionContext) {
             case 'compareDiff':
                 provider.openDiff(message.provider, message.aiResponse);
                 return;
+            case 'merge':
+                mergeResponses(provider, message.aiResponse);
+                return;
         }
     });
 

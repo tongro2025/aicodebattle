@@ -61,3 +61,24 @@ export async function askAllCommand(context: vscode.ExtensionContext, provider: 
 
     provider.postMessageToWebview({ command: 'streamsComplete' });
 }
+
+export async function mergeResponses(provider: BattleViewProvider, aiResponse: string) {
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) {
+        vscode.window.showErrorMessage('No active text editor found.');
+        return;
+    }
+
+    const document = editor.document;
+    const selection = editor.selection;
+
+    editor.edit(editBuilder => {
+        editBuilder.replace(selection, aiResponse);
+    }).then(success => {
+        if (success) {
+            vscode.window.showInformationMessage('AI response merged successfully!');
+        } else {
+            vscode.window.showErrorMessage('Failed to merge AI response.');
+        }
+    });
+}

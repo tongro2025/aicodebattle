@@ -202,11 +202,22 @@ export class BattleViewProvider implements vscode.WebviewViewProvider {
                             aiResponse = openaiFullResponse;
                         }
                                         vscode.postMessage({ command: 'compareDiff', provider, aiResponse });
-                                    });
-                                });
-                            </script>
-                        </body>
-                        </html>
+                                            });
+                                        });
+
+                                        document.querySelectorAll('.vote-button').forEach(button => {
+                                            button.addEventListener('click', () => {
+                                                const provider = button.dataset.provider;
+                                                const vote = button.dataset.vote;
+                                                vscode.postMessage({ command: 'vote', provider, vote });
+                                            });
+                                        });
+                                    </script>
+                                </body>
+                                </html>
+                                        `;
+                            }
+                        }
                                                 `;
                             }
                         }
