@@ -3,9 +3,9 @@ import * as vscode from 'vscode';
 import { askGemini } from '../providers/gemini';
 import { askClaude } from '../providers/claude';
 import { askOpenAI } from '../providers/openai';
-import { createBattleWebview } from '../views/battle';
+import { BattleViewProvider } from "../views/battle";
 
-export async function askAllCommand(context: vscode.ExtensionContext) {
+export async function askAllCommand(context: vscode.ExtensionContext, provider: BattleViewProvider) {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
         return;
@@ -18,34 +18,40 @@ export async function askAllCommand(context: vscode.ExtensionContext) {
         return;
     }
 
-    const panel = createBattleWebview(context);
+    const processStream = async (provider: 'gemini' | 'claude' | 'openai') => {
+        const stream = provider === 'gemini' ? await askGemini(question, selection)
+            : provider === 'claude' ? await askClaude(question, selection)
+            : await askOpenAI(question, selection);
 
-    // Gemini
-    const geminiStream = await askGemini(question, selection);
-    if (geminiStream) {
-        for await (const chunk of geminiStream) {
-            const chunkText = chunk.text();
-            panel.webview.postMessage({ command: 'updateResponse', provider: 'gemini', text: chunkText });
-        }
-    }
+        if (!stream) {return;}
 
-    // Claude
-    const claudeStream = await askClaude(question, selection);
-    if (claudeStream) {
-        for await (const event of claudeStream) {
-            if (event.type === 'content_block_delta') {
-                const chunkText = event.delta.text;
-                panel.webview.postMessage({ command: 'updateResponse', provider: 'claude', text: chunkText });
+        try {
+            for await (const chunk of stream) {
+                let chunkText = '';
+                if (provider === 'gemini') {
+                    chunkText = (chunk as GenerateContentResponse).text();
+                } else if (provider === 'claude') {
+                    const claudeChunk = chunk as MessageStreamEvent;
+                    if (claudeChunk.type === 'content_block_delta') {
+                        chunkText = claudeChunk.delta.text || '';
+                    }
+                } else if (provider === 'openai') {
+                    chunkText = (chunk as ChatCompletionChunk).choices[0]?.delta?.content || '';
+                }
+
+                if (chunkText) {
+                    provider.updateResponse(provider, chunkText);
+                }
             }
+        } catch (error) {
+            console.error(`${provider} stream processing error:`, error);
+            provider.updateResponse(provider, `Error: ${error.message}`);
         }
-    }
+    };
 
-    // OpenAI
-    const openaiStream = await askOpenAI(question, selection);
-    if (openaiStream) {
-        for await (const chunk of openaiStream) {
-            const chunkText = chunk.choices[0]?.delta?.content || "";
-            panel.webview.postMessage({ command: 'updateResponse', provider: 'openai', text: chunkText });
-        }
-    }
+    await Promise.all([
+        processStream('gemini'),
+        processStream('claude'),
+        processStream('openai')
+    ]);
 }
